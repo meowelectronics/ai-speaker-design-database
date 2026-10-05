@@ -1,0 +1,791 @@
+{
+  "schema_version": 1,
+  "sources": [
+    {
+      "id": "ldc",
+      "title": "Vance Dickason, The Loudspeaker Design Cookbook, 7th edition",
+      "kind": "book",
+      "uri": "",
+      "citation": "Sections 0, 1, 2, 5, 6, 7, 8",
+      "notes": "User manual citation label LDC. Consult original tables for alignments not implemented locally."
+    },
+    {
+      "id": "hse",
+      "title": "Glen M. Ballou (ed.), Handbook for Sound Engineers, 4th edition",
+      "kind": "book",
+      "uri": "",
+      "citation": "Sections 10, 17, 23, 46",
+      "notes": "User manual citation label HSE."
+    },
+    {
+      "id": "mha",
+      "title": "F. Alton Everest, The Master Handbook of Acoustics, 4th edition",
+      "kind": "book",
+      "uri": "",
+      "citation": "Chapters 2, 11, 13, 15, 25",
+      "notes": "User manual citation label MHA."
+    },
+    {
+      "id": "asr_quasi_anechoic",
+      "title": "ASR quasi-anechoic measurements and spinoramas thread",
+      "kind": "forum",
+      "uri": "https://www.audiosciencereview.com/forum/index.php?threads/how-to-make-quasi-anechoic-speaker-measurements-spinoramas-with-rew-and-vituixcad.21860/",
+      "citation": "18-page discussion",
+      "notes": "Timing, gating, nearfield splicing, angle sets, and measurement practice; forum observations are not standards."
+    },
+    {
+      "id": "crover_docs",
+      "title": "Crover speaker design documentation and calculators",
+      "kind": "website",
+      "uri": "https://crover.app/docs",
+      "citation": "Public docs/calculator pages",
+      "notes": "Equations and practical calculators are starting estimates; validate against measurements."
+    },
+    {
+      "id": "crover_frd",
+      "title": "Crover FRD/ZMA measurement workflow",
+      "kind": "website",
+      "uri": "https://crover.app/en/create-frd-zma-files",
+      "citation": "Measurement guide",
+      "notes": "File creation/import reference."
+    },
+    {
+      "id": "crover_zma",
+      "title": "Crover REW impedance measurement workflow",
+      "kind": "website",
+      "uri": "https://crover.app/en/measure-impedance-rew-zma",
+      "citation": "Impedance guide",
+      "notes": "Measurement guide."
+    },
+    {
+      "id": "simulator_00aud",
+      "title": "00aud loudspeaker simulator",
+      "kind": "website",
+      "uri": "https://simulator.00aud.io/app",
+      "citation": "Public application bundles",
+      "notes": "Sealed, vented, PR, T/S, and acoustic-impedance equations inspected from public bundles; source-map endpoints were unavailable."
+    },
+    {
+      "id": "vituixcad_help",
+      "title": "VituixCAD help/manual endpoints",
+      "kind": "unavailable_reference",
+      "uri": "",
+      "citation": "Help/PDF endpoints",
+      "notes": "Automated retrieval was blocked; no equations are claimed as extracted from these endpoints."
+    },
+    {
+      "id": "htguide_index",
+      "title": "HTGuide loudspeaker forum index",
+      "kind": "forum_index",
+      "uri": "",
+      "citation": "User-provided index link",
+      "notes": "Index only, not a specific design thread; no thread-specific claims extracted."
+    },
+    {
+      "id": "reddit_discussion",
+      "title": "User-provided loudspeaker design Reddit page",
+      "kind": "unavailable_reference",
+      "uri": "",
+      "citation": "User-provided link",
+      "notes": "Page did not expose usable discussion text to the fetch tool."
+    },
+    {
+      "id": "scimpy",
+      "title": "Scimpy loudspeaker design and impedance fitting project",
+      "kind": "software_reference",
+      "uri": "https://github.com/maqifrnswa/scimpy",
+      "citation": "GPL-3.0 project",
+      "notes": "Used as algorithm/workflow reference. Source is not vendored; local code is independently implemented."
+    },
+    {
+      "id": "speakersim",
+      "title": "SpeakerSim loudspeaker simulation project",
+      "kind": "software_reference",
+      "uri": "https://github.com/LightBit/SpeakerSim",
+      "citation": "GPL-3.0 project",
+      "notes": "Used as algorithm/workflow reference. Source is not vendored; local code is independently implemented."
+    }
+  ],
+  "knowledge_items": [
+    {
+      "id": "spl-distance-power",
+      "domain": "targets",
+      "title": "SPL distance and power scaling",
+      "summary": "Free-field inverse-distance loss and electrical power level scaling for initial amplifier budgeting.",
+      "equations": "SPL(r)=SPL(1m)-20*log10(r_m); deltaSPL=10*log10(P2/P1)",
+      "inputs_json": [
+        "sensitivity_1w_1m_db",
+        "target_spl_db",
+        "distance_m",
+        "headroom_db"
+      ],
+      "units_json": {
+        "distance_m": "m",
+        "power_w": "W",
+        "spl_db": "dB SPL"
+      },
+      "assumptions": "Free field; sensitivity remains linear; room gain, compression, and distortion omitted.",
+      "implementation_ref": "scripts/system_design/design_knowledge.py:required_power,spl_at_distance,voltage_for_power",
+      "source_ids": [
+        "hse",
+        "mha"
+      ]
+    },
+    {
+      "id": "ebp-screen",
+      "domain": "driver-selection",
+      "title": "EBP topology screen",
+      "summary": "Use Fs/Qes only to shortlist sealed versus vented investigation; not an alignment or final choice.",
+      "equations": "EBP=Fs/Qes",
+      "inputs_json": [
+        "fs_hz",
+        "qes"
+      ],
+      "units_json": {
+        "fs_hz": "Hz",
+        "qes": "dimensionless"
+      },
+      "assumptions": "Approximate screening rule; compare measured response, volume, excursion, and losses.",
+      "implementation_ref": "scripts/system_design/design_knowledge.py:ebp_screen",
+      "source_ids": [
+        "ldc"
+      ]
+    },
+    {
+      "id": "ts-forward",
+      "domain": "driver-data",
+      "title": "Forward Thiele-Small derivation",
+      "summary": "Calculate composite T/S values from measured electrical/mechanical components and piston data.",
+      "equations": "Fs=1/(2*pi*sqrt(Mms*Cms)); Qms=2*pi*Fs*Mms/Rms; Qes=2*pi*Fs*Mms*Re/BL^2; Qts=Qms*Qes/(Qms+Qes); Vas=rho*c^2*Cms*Sd^2",
+      "inputs_json": [
+        "Re",
+        "Mms",
+        "Cms",
+        "Rms",
+        "BL",
+        "Sd"
+      ],
+      "units_json": {
+        "Re": "ohm",
+        "Mms": "kg",
+        "Cms": "m/N",
+        "Rms": "N*s/m",
+        "BL": "T*m",
+        "Sd": "m^2"
+      },
+      "assumptions": "Small-signal linear parameters; constants use local air-density/sound-speed defaults.",
+      "implementation_ref": "scripts/enclosure/ts_alignments.py:derive_thiele_small",
+      "source_ids": [
+        "ldc",
+        "hse",
+        "scimpy"
+      ]
+    },
+    {
+      "id": "ts-inverse",
+      "domain": "driver-data",
+      "title": "Inverse composite T/S derivation",
+      "summary": "Derive motor/mechanical components from Fs/Qes/Qms/Re/BL/Sd and estimate reference sensitivity.",
+      "equations": "Mms=Qes*BL^2/(2*pi*Fs*Re); Cms=1/((2*pi*Fs)^2*Mms); Rms=2*pi*Fs*Mms/Qms",
+      "inputs_json": [
+        "Fs",
+        "Qes",
+        "Qms",
+        "Re",
+        "BL",
+        "Sd"
+      ],
+      "units_json": {
+        "Fs": "Hz",
+        "Re": "ohm",
+        "BL": "T*m",
+        "Sd": "m^2"
+      },
+      "assumptions": "Derived values inherit rounding/error from input T/S values.",
+      "implementation_ref": "scripts/enclosure/ts_alignments.py:derive_driver_components,driver_components_from_thiele_small",
+      "source_ids": [
+        "ldc",
+        "scimpy"
+      ]
+    },
+    {
+      "id": "half-power-ts",
+      "domain": "driver-measurement",
+      "title": "Half-power impedance T/S estimate",
+      "summary": "Estimate Fs/Qes/Qms/Qts from Re, resonance impedance, and two prescribed flank frequencies.",
+      "equations": "r0=Zpeak/Re; Fs=sqrt(f1*f2); Qms=Fs*sqrt(r0)/(f2-f1); Qes=Qms/(r0-1); Qts=Qms*Qes/(Qms+Qes)",
+      "inputs_json": [
+        "Re",
+        "Zpeak",
+        "f1",
+        "f2"
+      ],
+      "units_json": {
+        "Re": "ohm",
+        "Zpeak": "ohm",
+        "f1": "Hz",
+        "f2": "Hz"
+      },
+      "assumptions": "Sensitive to nonlinear/irregular resonance peak and correct half-power crossing selection.",
+      "implementation_ref": "scripts/system_design/design_knowledge.py:half_power_ts",
+      "source_ids": [
+        "ldc",
+        "hse"
+      ]
+    },
+    {
+      "id": "added-mass",
+      "domain": "driver-measurement",
+      "title": "Added-mass Mms method",
+      "summary": "Infer total moving mass from free-air and added-mass resonances.",
+      "equations": "Mms=Mx/((Fs/Fsx)^2-1)",
+      "inputs_json": [
+        "Fs",
+        "Fsx",
+        "Mx"
+      ],
+      "units_json": {
+        "Fs": "Hz",
+        "Fsx": "Hz",
+        "Mx": "kg"
+      },
+      "assumptions": "Mass must be attached securely and symmetrically; low drive and repeatable mounting required.",
+      "implementation_ref": "scripts/system_design/design_knowledge.py:added_mass_mms",
+      "source_ids": [
+        "ldc",
+        "hse"
+      ]
+    },
+    {
+      "id": "delta-compliance",
+      "domain": "driver-measurement",
+      "title": "Delta-compliance sealed test-box method",
+      "summary": "Estimate Mms from free-air and sealed test-box resonance using box acoustic compliance.",
+      "equations": "Cmb=Vb/(rho*c^2*Sd^2); Mms=1/(4*pi^2*Cmb*(Fbox^2-Fs^2))",
+      "inputs_json": [
+        "Vb",
+        "Sd",
+        "Fs",
+        "Fbox"
+      ],
+      "units_json": {
+        "Vb": "m^3",
+        "Sd": "m^2",
+        "Fs": "Hz",
+        "Fbox": "Hz"
+      },
+      "assumptions": "Test box must be sealed and its actual air volume/driver geometry known.",
+      "implementation_ref": "scripts/system_design/design_knowledge.py:delta_compliance_mms",
+      "source_ids": [
+        "ldc",
+        "hse"
+      ]
+    },
+    {
+      "id": "series-loss-q",
+      "domain": "driver-measurement",
+      "title": "Series resistance Q correction",
+      "summary": "Include amplifier/cable/crossover series resistance when calculating effective Qes/Qts.",
+      "equations": "Qes_new=Qes*(Re+Rseries)/Re; Qts_new=Qms*Qes_new/(Qms+Qes_new)",
+      "inputs_json": [
+        "Re",
+        "Qes",
+        "Qms",
+        "Rseries"
+      ],
+      "units_json": {
+        "Re": "ohm",
+        "Rseries": "ohm"
+      },
+      "assumptions": "Effective series resistance is measured/reasonably bounded at operating conditions.",
+      "implementation_ref": "scripts/system_design/design_knowledge.py:corrected_q_values",
+      "source_ids": [
+        "ldc"
+      ]
+    },
+    {
+      "id": "sealed-alignment",
+      "domain": "enclosure",
+      "title": "Sealed-box alignment",
+      "summary": "Calculate sealed-box volume and response from target Qtc and driver T/S.",
+      "equations": "alpha=(Qtc/Qts)^2-1; Vb=Vas/alpha; Fc=Fs*sqrt(1+alpha)",
+      "inputs_json": [
+        "Fs",
+        "Qts",
+        "Vas",
+        "target_Qtc",
+        "Qa"
+      ],
+      "units_json": {
+        "Fs": "Hz",
+        "Vas": "m^3",
+        "Vb": "m^3",
+        "Qtc": "dimensionless"
+      },
+      "assumptions": "Small-signal lumped model; losses and stuffing require measured/calibrated treatment.",
+      "implementation_ref": "scripts/enclosure/ts_alignments.py:sealed_alignment; scripts/enclosure/acoustic_model.py",
+      "source_ids": [
+        "ldc",
+        "hse",
+        "speakersim"
+      ]
+    },
+    {
+      "id": "vent-loss",
+      "domain": "enclosure",
+      "title": "Bass-reflex loss combination",
+      "summary": "Combine leakage, absorption, and port losses as reciprocal Q contributions.",
+      "equations": "1/Qtotal=1/Ql+1/Qa+1/Qp",
+      "inputs_json": [
+        "Ql",
+        "Qa",
+        "Qp"
+      ],
+      "units_json": {
+        "Ql": "dimensionless",
+        "Qa": "dimensionless",
+        "Qp": "dimensionless"
+      },
+      "assumptions": "Loss Q values are alignment/model inputs; not universal defaults.",
+      "implementation_ref": "scripts/enclosure/acoustic_model.py:EnclosureParameters",
+      "source_ids": [
+        "ldc",
+        "hse"
+      ]
+    },
+    {
+      "id": "port-helmholtz",
+      "domain": "enclosure",
+      "title": "Helmholtz port geometry",
+      "summary": "Calculate effective/physical port length, correction, per-port dimensions, and pipe resonance.",
+      "equations": "Fb=(c/(2*pi))*sqrt(S/(Vb*Leff)); Leff=Lphysical+end_correction",
+      "inputs_json": [
+        "Fb",
+        "port_area",
+        "Vb",
+        "end_correction"
+      ],
+      "units_json": {
+        "Fb": "Hz",
+        "port_area": "m^2",
+        "Vb": "m^3",
+        "length": "m"
+      },
+      "assumptions": "Round-port end corrections do not transfer directly to slots, flares, or ports near walls.",
+      "implementation_ref": "scripts/enclosure/acoustic_model.py; scripts/system_design/design_knowledge.py",
+      "source_ids": [
+        "ldc",
+        "crover_docs"
+      ]
+    },
+    {
+      "id": "port-area-velocity",
+      "domain": "enclosure",
+      "title": "Port area and velocity screening",
+      "summary": "Screen total port area from driver displacement and chosen peak air-speed limit; calculate simulated port velocity separately.",
+      "equations": "Sport_total ~= Nd*Sd*Xmax*2*pi*Fb/vmax",
+      "inputs_json": [
+        "Nd",
+        "Sd",
+        "Xmax",
+        "Fb",
+        "vmax"
+      ],
+      "units_json": {
+        "Sd": "m^2",
+        "Xmax": "m",
+        "Fb": "Hz",
+        "vmax": "m/s",
+        "Sport": "m^2"
+      },
+      "assumptions": "Rule-of-thumb only; does not predict turbulence, compression, or audible noise.",
+      "implementation_ref": "scripts/enclosure/acoustic_model.py; scripts/system_design/design_knowledge.py",
+      "source_ids": [
+        "ldc",
+        "crover_docs"
+      ]
+    },
+    {
+      "id": "room-modes",
+      "domain": "room",
+      "title": "Rectangular room modes",
+      "summary": "Calculate axial/tangential/oblique modal frequencies for rectangular room dimensions.",
+      "equations": "f=(c/2)*sqrt((nx/Lx)^2+(ny/Ly)^2+(nz/Lz)^2)",
+      "inputs_json": [
+        "Lx",
+        "Ly",
+        "Lz",
+        "mode_indices",
+        "c"
+      ],
+      "units_json": {
+        "Lx": "m",
+        "c": "m/s",
+        "f": "Hz"
+      },
+      "assumptions": "Ideal rigid rectangular room; damping, openings, furnishings, and source/listener coupling are omitted.",
+      "implementation_ref": "scripts/system_design/design_knowledge.py:room_modes",
+      "source_ids": [
+        "hse",
+        "mha"
+      ]
+    },
+    {
+      "id": "sbr-null",
+      "domain": "room",
+      "title": "Single-boundary SBIR first null",
+      "summary": "Estimate first cancellation frequency for a source near one rigid boundary.",
+      "equations": "f1=c/(4*d)",
+      "inputs_json": [
+        "source_boundary_distance",
+        "c"
+      ],
+      "units_json": {
+        "d": "m",
+        "c": "m/s",
+        "f1": "Hz"
+      },
+      "assumptions": "Single ideal rigid plane only; multi-boundary room response needs geometry and measurements.",
+      "implementation_ref": "scripts/system_design/design_knowledge.py:first_boundary_null",
+      "source_ids": [
+        "mha"
+      ]
+    },
+    {
+      "id": "baffle-diffraction",
+      "domain": "baffle",
+      "title": "Baffle step and edge diffraction",
+      "summary": "Use width-only step estimates for initial screening; use per-driver diffraction and measured on-baffle FRD for final crossover work.",
+      "equations": "f_step ~= 115/W_m; full-space to forward-hemisphere level change ~= 6 dB",
+      "inputs_json": [
+        "baffle_width",
+        "driver_position",
+        "edge_shape"
+      ],
+      "units_json": {
+        "W": "m",
+        "f_step": "Hz"
+      },
+      "assumptions": "Width-only approximation excludes height, depth, driver location, edge radius, and nearby boundaries.",
+      "implementation_ref": "scripts/enclosure/acoustic_model.py; scripts/system_design/design_knowledge.py",
+      "source_ids": [
+        "ldc",
+        "hse",
+        "mha",
+        "crover_docs"
+      ]
+    },
+    {
+      "id": "nearfield-splice",
+      "domain": "measurement",
+      "title": "Nearfield bass scaling and splice",
+      "summary": "Scale nearfield SPL using radiating area and splice against gated farfield/ground-plane data in an overlap region.",
+      "equations": "DeltaL=10*log10(Ssource/Sreference); circular area form=20*log10(Dsource/Dreference)",
+      "inputs_json": [
+        "source_area",
+        "reference_area",
+        "phase",
+        "timing",
+        "drive_voltage"
+      ],
+      "units_json": {
+        "area": "m^2",
+        "diameter": "m",
+        "level": "dB"
+      },
+      "assumptions": "Approximation; source geometry, coherent timing, port/PR radiation, and splice method affect error.",
+      "implementation_ref": "scripts/enclosure/acoustic_model.py; scripts/system_design/design_knowledge.py",
+      "source_ids": [
+        "asr_quasi_anechoic",
+        "crover_docs",
+        "ldc"
+      ]
+    },
+    {
+      "id": "gating-resolution",
+      "domain": "measurement",
+      "title": "Gated farfield frequency resolution",
+      "summary": "Nominal lower useful resolution scales approximately with the inverse of the time window; inspect the impulse/reflection and overlap-splice low bass.",
+      "equations": "Delta_f ~= 1/Tgate",
+      "inputs_json": [
+        "gate_start_s",
+        "gate_end_s",
+        "first_reflection_s"
+      ],
+      "units_json": {
+        "Tgate": "s",
+        "Delta_f": "Hz"
+      },
+      "assumptions": "Window, SNR, reflections, and room affect practical resolution; this is not a sharp cutoff.",
+      "implementation_ref": "docs/CALCULATOR_GUIDE.md",
+      "source_ids": [
+        "asr_quasi_anechoic",
+        "hse"
+      ]
+    },
+    {
+      "id": "zobel-lpad",
+      "domain": "crossover",
+      "title": "Zobel and constant-impedance L-pad starts",
+      "summary": "Calculate first-pass impedance compensation and tweeter attenuation values, then remeasure actual branch impedance.",
+      "equations": "Zobel R~=1.25*Re; C=Le/R^2; Lpad requires series/shunt divider satisfying specified attenuation and load",
+      "inputs_json": [
+        "Re",
+        "Le",
+        "target_load",
+        "attenuation_db"
+      ],
+      "units_json": {
+        "Re": "ohm",
+        "Le": "H",
+        "C": "F",
+        "attenuation": "dB"
+      },
+      "assumptions": "Starting values only; driver impedance, component losses, and power ratings matter.",
+      "implementation_ref": "scripts/system_design/design_knowledge.py:zobel_starting_values,lpad_constant_impedance; scripts/system_design/system_calculator.py",
+      "source_ids": [
+        "ldc",
+        "hse",
+        "crover_docs"
+      ]
+    },
+    {
+      "id": "angular-average",
+      "domain": "measurement",
+      "title": "Angular power averaging",
+      "summary": "Average acoustic power linearly using valid angular weights; sparse horizontal samples alone are not full-sphere sound power.",
+      "equations": "Lavg=10*log10(sum(w_i*10^(Li/10))/sum(w_i))",
+      "inputs_json": [
+        "angle_responses",
+        "angular_weights"
+      ],
+      "units_json": {
+        "Li": "dB SPL",
+        "weights": "solid-angle weights"
+      },
+      "assumptions": "Requires appropriate angular sample set and integration weights.",
+      "implementation_ref": "scripts/system_design/system_calculator.py:weighted_angular_average",
+      "source_ids": [
+        "asr_quasi_anechoic",
+        "hse"
+      ]
+    },
+    {
+      "id": "acoustic-offset",
+      "domain": "crossover",
+      "title": "Acoustic-center path offset",
+      "summary": "Convert path-distance difference to time delay and use measured phase/timing where available.",
+      "equations": "tau=d/c; phase_offset=-2*pi*f*tau",
+      "inputs_json": [
+        "path_difference",
+        "speed_of_sound"
+      ],
+      "units_json": {
+        "d": "m",
+        "c": "m/s",
+        "tau": "s"
+      },
+      "assumptions": "Geometric estimate; sloped baffles are not equivalent to physical or DSP time alignment at all angles.",
+      "implementation_ref": "scripts/system_design/system_calculator.py; scripts/system_design/design_knowledge.py:acoustic_center_delay",
+      "source_ids": [
+        "ldc"
+      ]
+    },
+    {
+      "id": "package-provenance",
+      "domain": "workflow",
+      "title": "Design package provenance",
+      "summary": "Hash the brief, configs, measurements, and fitted parameter inputs; calculation configs may still refer to external workspace files.",
+      "equations": "SHA256(file_bytes)",
+      "inputs_json": [
+        "brief",
+        "configs",
+        "FRD",
+        "ZMA",
+        "calibration",
+        "fitted_json"
+      ],
+      "units_json": {},
+      "assumptions": "Manifest is auditable but not self-contained/portable unless all external inputs are copied and paths rewritten.",
+      "implementation_ref": "scripts/system_design/design_workflow.py:_input_manifest",
+      "source_ids": []
+    },
+    {
+      "id": "prompt-normalization",
+      "domain": "workflow",
+      "title": "Prompt normalization gate",
+      "summary": "Natural-language requests must be normalized into explicit schema v1 fields before deterministic calculations; the CLI does not infer values from free text.",
+      "equations": "No equation; deterministic schema contract",
+      "inputs_json": [
+        "user_prompt",
+        "schema_v1_brief"
+      ],
+      "units_json": {},
+      "assumptions": "The language agent may propose field mappings but must ask the user to confirm ambiguous values.",
+      "implementation_ref": "scripts/system_design/design_workflow.py:assess_brief; data/configs/design_brief_template.json",
+      "source_ids": []
+    }
+  ],
+  "workflow_stages": [
+    {
+      "id": "targets",
+      "sequence": 1,
+      "title": "Define goals",
+      "inputs_json": [
+        "use_case",
+        "bandwidth",
+        "SPL",
+        "distance",
+        "room",
+        "budget",
+        "directivity",
+        "amplifier"
+      ],
+      "gate": "Do not choose parts until targets and units are explicit.",
+      "implementation_ref": "scripts/system_design/design_workflow.py"
+    },
+    {
+      "id": "drivers",
+      "sequence": 2,
+      "title": "User-selected driver data",
+      "inputs_json": [
+        "exact_part",
+        "quantity",
+        "wiring",
+        "T/S_source",
+        "price_optional"
+      ],
+      "gate": "Bind every model branch to the user-selected identity; no substitutions.",
+      "implementation_ref": "scripts/enclosure/calculate_box.py; scripts/measurement/impedance_fit.py"
+    },
+    {
+      "id": "enclosure",
+      "sequence": 3,
+      "title": "Enclosure calculation",
+      "inputs_json": [
+        "alignment",
+        "net_volume",
+        "tuning",
+        "losses",
+        "port_or_PR"
+      ],
+      "gate": "Check volume, impedance, F3, excursion, port/PR behavior, and model limits.",
+      "implementation_ref": "scripts/enclosure/acoustic_model.py; scripts/system_design/design_workflow.py"
+    },
+    {
+      "id": "fabrication",
+      "sequence": 4,
+      "title": "Geometry and build package",
+      "inputs_json": [
+        "external_dimensions",
+        "wall",
+        "displacements",
+        "cutouts",
+        "material",
+        "BOM"
+      ],
+      "gate": "Do not infer missing dimensions or displacements.",
+      "implementation_ref": "scripts/system_design/design_workflow.py"
+    },
+    {
+      "id": "measure",
+      "sequence": 5,
+      "title": "Finished-baffle measurements",
+      "inputs_json": [
+        "FRD_angles",
+        "complex_ZMA",
+        "mic_calibration",
+        "voltage",
+        "distance",
+        "time_reference"
+      ],
+      "gate": "Reject missing requested angles/ranges; distinguish user metadata from file-verified coverage.",
+      "implementation_ref": "scripts/measurement/response_data.py; scripts/system_design/calculate_system.py"
+    },
+    {
+      "id": "crossover",
+      "sequence": 6,
+      "title": "Complex crossover design",
+      "inputs_json": [
+        "measured_FRD_ZMA",
+        "branches",
+        "components",
+        "DCR_ESR",
+        "offset",
+        "polarity"
+      ],
+      "gate": "Check summed response, phase, impedance, angle coverage, and user impedance floor.",
+      "implementation_ref": "scripts/system_design/system_calculator.py; scripts/system_design/calculate_system.py"
+    },
+    {
+      "id": "prototype",
+      "sequence": 7,
+      "title": "Build and verify",
+      "inputs_json": [
+        "prototype_measurements",
+        "component_values",
+        "excursion",
+        "thermal_observations",
+        "listening"
+      ],
+      "gate": "Simulation is not physical or safety certification.",
+      "implementation_ref": "docs/DESIGN_KNOWLEDGE_BASE.md"
+    }
+  ],
+  "limitations": [
+    {
+      "id": "nonlinear-driver",
+      "category": "physics",
+      "description": "No BL(x), Cms(x), hysteresis, harmonic/intermodulation distortion, or large-signal motor/suspension model.",
+      "needed": "Large-signal parameter curves or specialized nonlinear measurements/models."
+    },
+    {
+      "id": "thermal-compression",
+      "category": "physics",
+      "description": "Power ceilings are estimates; voice-coil temperature/time/compression is not modeled.",
+      "needed": "Thermal time constants, resistance-vs-temperature, airflow, and power test data."
+    },
+    {
+      "id": "room-response",
+      "category": "acoustics",
+      "description": "Rectangular modal and single-boundary SBIR equations are estimates, not full room simulation.",
+      "needed": "Room geometry, source/listener locations, boundary properties, and in-room measurements."
+    },
+    {
+      "id": "sound-card-acquisition",
+      "category": "measurement",
+      "description": "No live sound-card/audio-interface impedance acquisition in the CLI.",
+      "needed": "External REW/V/I measurement and exported complex ZMA."
+    },
+    {
+      "id": "full-spinorama",
+      "category": "measurement",
+      "description": "Sparse horizontal samples are not a full-sphere CTA-2034 spinorama.",
+      "needed": "Complete horizontal/vertical/rear angle data with standardized weights."
+    },
+    {
+      "id": "bb4-tables",
+      "category": "alignment",
+      "description": "The cited BB4/other LDC table entries are not fully implemented; do not guess unreadable lookup values.",
+      "needed": "Verified table data or a validated derivation."
+    },
+    {
+      "id": "cad-automation",
+      "category": "manufacturing",
+      "description": "The workflow produces dimensions/notes/configs but does not generate universal parametric CAD for arbitrary driver sets.",
+      "needed": "Driver geometry, selected CAD template, print/material constraints, and clearance validation."
+    },
+    {
+      "id": "natural-language-parser",
+      "category": "workflow",
+      "description": "The command-line workflow consumes schema-v1 JSON rather than parsing free-form natural language itself.",
+      "needed": "Agent-mediated normalization and user confirmation of ambiguous fields."
+    },
+    {
+      "id": "package-portability",
+      "category": "workflow",
+      "description": "The provenance manifest hashes measurement inputs, but package configs can still reference external absolute/workspace paths.",
+      "needed": "Bundle measurement/config dependencies and rewrite paths for a portable archive."
+    }
+  ]
+}

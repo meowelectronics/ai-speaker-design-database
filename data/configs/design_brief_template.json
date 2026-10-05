@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "project_name": "",
+  "ways": null,
+  "target": {
+    "low_hz": null,
+    "high_hz": null,
+    "target_spl_db": null,
+    "distance_m": null,
+    "headroom_db": null,
+    "use_case": "",
+    "room_or_placement": ""
+  },
+  "budget": {
+    "amount": null,
+    "currency": ""
+  },
+  "drivers": [],
+  "enclosure_config": "",
+  "box_design": null,
+  "box_simulation": {
+    "points": 500,
+    "voltage_rms": 2.83
+  },
+  "system_config": "",
+  "system_design": null,
+  "fabrication": {
+    "geometry_type": "",
+    "external_dimensions_mm": null,
+    "net_volume_l": null,
+    "displacements_l": {},
+    "wall_thickness_mm": null,
+    "material": "",
+    "cutouts": []
+  },
+  "bill_of_materials": [],
+  "measurement_metadata": {
+    "on_baffle": false,
+    "measurement_voltage_v": null,
+    "reference_distance_m": null,
+    "time_reference": "",
+    "microphone_orientation_degrees": null
+  }
+}
